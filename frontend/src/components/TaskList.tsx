@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Task } from '../types/task';
 import TaskItem from './TaskItem';
 import { taskApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface TaskListProps {}
 
@@ -12,9 +14,16 @@ const TaskList: React.FC<TaskListProps> = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
   useEffect(() => {
-    fetchTasks();
-  }, [filter]);
+    if (isAuthenticated) {
+      fetchTasks();
+    } else {
+      router.push('/login');
+    }
+  }, [filter, isAuthenticated, router]);
 
   const fetchTasks = async () => {
     try {

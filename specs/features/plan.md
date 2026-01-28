@@ -1,17 +1,17 @@
-# Implementation Plan: Task CRUD Operations
+# Implementation Plan: Todo Full-Stack Web Application Phase II
 
-**Branch**: `001-task-crud` | **Date**: 2026-01-25 | **Spec**: [link to task-crud.md]
-**Input**: Feature specification from `/specs/features/task-crud.md`
+**Branch**: `002-todo-fullstack-auth` | **Date**: 2026-01-29 | **Spec**: [link to feature specs]
+**Input**: Feature specification from `/specs/features/task-crud.md` and `/specs/features/authentication.md`
 
 **Note**: This template is filled in by the `/sp.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-Implement full CRUD operations for tasks in the Todo App. This includes creating, reading, updating, and deleting tasks with proper authentication and authorization. The feature will follow the architecture of a Next.js frontend communicating with a FastAPI backend, using SQLModel for database operations and JWT tokens for authentication.
+Implement complete authentication, middleware, login/signup, task cards, task editing, and full CRUD functionality for the Todo App. This involves integrating Better Auth for authentication, updating API endpoints to follow the required `/api/{user_id}/tasks` pattern, enhancing frontend components for a complete user experience, and ensuring proper user isolation where each user only sees their own tasks.
 
 ## Technical Context
 
-**Language/Version**: Python 3.11, TypeScript 5.0, Next.js 14+
+**Language/Version**: Python 3.11, TypeScript 5.0, Next.js 16+
 **Primary Dependencies**: FastAPI, SQLModel, Neon Serverless PostgreSQL, Better Auth, Next.js, Tailwind CSS
 **Storage**: PostgreSQL via SQLModel ORM
 **Testing**: pytest for backend, Jest/React Testing Library for frontend
@@ -57,7 +57,11 @@ backend/
 │   ├── services/
 │   │   └── task_service.py
 │   ├── api/
-│   │   └── tasks.py
+│   │   ├── tasks.py
+│   │   └── auth.py
+│   ├── auth/
+│   │   ├── middleware.py
+│   │   └── jwt_handler.py
 │   └── db/
 │       └── database.py
 └── tests/
@@ -69,18 +73,30 @@ frontend/
 ├── src/
 │   ├── components/
 │   │   ├── TaskList.tsx
+│   │   ├── TaskItem.tsx
 │   │   ├── TaskForm.tsx
-│   │   └── TaskItem.tsx
-│   ├── pages/
-│   │   ├── tasks/
-│   │   │   └── [id].tsx
-│   │   └── create-task.tsx
-│   └── services/
-│       └── api.ts
+│   │   ├── Login.tsx
+│   │   └── Signup.tsx
+│   ├── context/
+│   │   └── AuthContext.tsx
+│   ├── lib/
+│   │   └── api.ts
+│   └── types/
+│       └── task.ts
+├── app/
+│   ├── login/
+│   │   └── page.tsx
+│   ├── signup/
+│   │   └── page.tsx
+│   ├── tasks/
+│   │   └── page.tsx
+│   ├── create-task/
+│   │   └── page.tsx
+│   └── globals.css
 └── tests/
 ```
 
-**Structure Decision**: Web application with separate backend and frontend directories following the established architecture in the repository.
+**Structure Decision**: Web application with separate backend and frontend directories following the established architecture in the repository. Enhanced with proper authentication context and dedicated login/signup pages.
 
 ## Complexity Tracking
 

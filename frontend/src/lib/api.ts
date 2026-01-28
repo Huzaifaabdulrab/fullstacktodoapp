@@ -1,7 +1,7 @@
 // frontend/src/lib/api.ts
 import { Task, TaskCreate, TaskUpdate } from '../types/task';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 // Helper function to get JWT token from localStorage
 const getAuthToken = (): string | null => {
@@ -10,6 +10,7 @@ const getAuthToken = (): string | null => {
   }
   return null;
 };
+
 
 // Helper function to set JWT token in localStorage
 const setAuthToken = (token: string): void => {
@@ -109,19 +110,59 @@ export const authApi = {
     removeAuthToken();
   },
 
-  // Verify token validity
+  // Verify token validity - currently not implemented in backend
   verifyToken: async (): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-      });
+    // For now, just check if we have a token in localStorage
+    // In a real app, you would make an API call to verify the token
+    const token = getAuthToken();
+    if (!token) return false;
 
-      return response.ok;
+    try {
+      // Decode the token to check if it's expired
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+
+      const payload = parts[1];
+      const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+      const decodedPayload = atob(paddedPayload);
+      const parsedPayload = JSON.parse(decodedPayload);
+
+      // Check if token is expired
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (parsedPayload.exp && parsedPayload.exp < currentTime) {
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error('Token verification error:', error);
       return false;
     }
+  }
+};
+
+// Helper function to decode JWT token and extract user ID
+const getUserIdFromToken = (): string | null => {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    // Split the token to get the payload part
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    // Decode the payload (second part)
+    const payload = parts[1];
+    // Add padding if needed
+    const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+    const decodedPayload = atob(paddedPayload);
+    const parsedPayload = JSON.parse(decodedPayload);
+
+    // Return the user ID from the 'sub' claim
+    return parsedPayload.sub || null;
+  } catch (error) {
+    console.error('Error decoding JWT token:', error);
+    return null;
   }
 };
 
@@ -130,8 +171,13 @@ export const taskApi = {
   // Get all tasks for the authenticated user
   getTasks: async (status?: 'pending' | 'completed' | 'all'): Promise<Task[]> => {
     try {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       const params = status ? `?status=${status}` : '';
-      const response = await fetch(`${API_BASE_URL}/api/tasks${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks${params}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -141,6 +187,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to fetch tasks: ${response.status}`);
       }
@@ -155,7 +204,12 @@ export const taskApi = {
   // Create a new task
   createTask: async (taskData: TaskCreate): Promise<Task> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(taskData),
@@ -166,6 +220,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to create task: ${response.status}`);
       }
@@ -180,7 +237,12 @@ export const taskApi = {
   // Get a specific task
   getTaskById: async (taskId: number): Promise<Task> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks/${taskId}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -190,6 +252,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to fetch task: ${response.status}`);
       }
@@ -204,7 +269,12 @@ export const taskApi = {
   // Update a task
   updateTask: async (taskId: number, taskData: TaskUpdate): Promise<Task> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks/${taskId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(taskData),
@@ -215,6 +285,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to update task: ${response.status}`);
       }
@@ -229,7 +302,12 @@ export const taskApi = {
   // Delete a task
   deleteTask: async (taskId: number): Promise<void> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks/${taskId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -239,6 +317,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to delete task: ${response.status}`);
       }
@@ -251,7 +332,12 @@ export const taskApi = {
   // Toggle task completion
   toggleTaskCompletion: async (taskId: number, completed?: boolean): Promise<Task> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/complete`, {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/${userId}/tasks/${taskId}/complete`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(completed !== undefined ? { completed } : {}),
@@ -262,6 +348,9 @@ export const taskApi = {
           // Token might be expired, redirect to login
           removeAuthToken();
           window.location.href = '/login';
+        } else if (response.status === 403) {
+          // User ID mismatch
+          throw new Error('Access denied: Invalid user permissions');
         }
         throw new Error(`Failed to toggle task completion: ${response.status}`);
       }

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Task, TaskCreate, TaskUpdate } from '../types/task';
 import { taskApi } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface TaskFormProps {
   onTaskCreated?: () => void;
@@ -14,6 +16,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onTaskUpdated, taskT
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Populate form when editing a task
   useEffect(() => {
@@ -32,6 +37,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onTaskCreated, onTaskUpdated, taskT
 
     if (!title.trim()) {
       alert('Title is required');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      router.push('/login');
       return;
     }
 

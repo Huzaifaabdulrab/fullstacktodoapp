@@ -1,3 +1,6 @@
+# src/db/database.py
+# Modified: Import User in create_db_and_tables
+
 from sqlmodel import create_engine
 from sqlalchemy import event
 from sqlalchemy.pool import Pool
@@ -32,7 +35,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 def create_db_and_tables():
     """Create database tables."""
-    from src.models.task import Task
+    from src.models.task import Task, User  # Added User import
     from sqlmodel import SQLModel
     
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(engine) 

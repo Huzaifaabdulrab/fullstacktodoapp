@@ -1,112 +1,118 @@
-# Quickstart Guide: Task CRUD Operations
+# Quickstart Guide: Todo Full-Stack Web Application
 
 ## Overview
-This guide provides instructions for quickly getting started with the Task CRUD operations feature in the Todo App.
+This guide provides step-by-step instructions to set up and run the Todo Full-Stack Web Application with complete authentication, task management, and CRUD functionality.
 
 ## Prerequisites
-- Node.js 18+ for frontend
-- Python 3.11+ for backend
-- PostgreSQL database (Neon recommended)
-- Better Auth configured for authentication
-- Environment variables set up (.env file)
+- Node.js 18+ (for frontend)
+- Python 3.11+ (for backend)
+- Poetry (for Python dependency management)
+- npm or yarn (for frontend dependency management)
+- PostgreSQL (or access to Neon Serverless PostgreSQL)
 
-## Setup Instructions
+## Environment Setup
 
-### 1. Clone and Install Dependencies
+### 1. Clone the repository
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd todoapp
+git clone <repository-url>
+cd todo-app
+```
 
-# Navigate to backend and install Python dependencies
+### 2. Set up backend environment
+```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+poetry install
+poetry shell
+```
 
-# Navigate to frontend and install Node.js dependencies
+### 3. Set up frontend environment
+```bash
 cd ../frontend
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in both backend and frontend directories with the following:
+## Configuration
 
-Backend (.env):
-```
-DATABASE_URL=your_postgresql_connection_string
-BETTER_AUTH_SECRET=your_auth_secret
-```
+### 1. Backend Configuration
+Create a `.env` file in the `backend` directory with the following variables:
 
-Frontend (.env):
-```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```env
+DATABASE_URL="postgresql://username:password@localhost:5432/todo_app"  # For Neon: postgresql://...
+BETTER_AUTH_SECRET="your-super-secret-jwt-key-here"  # At least 32 characters
 ```
 
-### 3. Database Setup
-Run the following command in the backend directory to initialize the database:
-```bash
-cd backend
-python -m src.db.init  # Adjust path as needed for your setup
+### 2. Frontend Configuration
+Create a `.env.local` file in the `frontend` directory with the following variables:
+
+```env
+NEXT_PUBLIC_API_BASE_URL="http://localhost:8000"
+NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"  # Your frontend URL
 ```
 
-### 4. Start the Applications
-Start the backend server:
+## Running the Application
+
+### 1. Start the backend server
 ```bash
 cd backend
 uvicorn main:app --reload --port 8000
 ```
+The backend will be available at `http://localhost:8000`.
 
-Start the frontend server:
+### 2. Start the frontend server
+In a new terminal:
 ```bash
 cd frontend
 npm run dev
 ```
-
-## Testing the Feature
-
-### 1. Authentication
-- Register a new user or sign in to get a JWT token
-- The token will be stored in your browser's session
-
-### 2. Creating a Task
-- Navigate to the "Create Task" page
-- Fill in the title (required, 1-200 characters) and description (optional, max 1000 characters)
-- Submit the form to create the task
-- Verify the task appears in your task list
-
-### 3. Viewing Tasks
-- Navigate to the "My Tasks" page
-- View all your tasks with their titles, descriptions, and completion status
-- Use filters to show pending, completed, or all tasks
-
-### 4. Updating a Task
-- Click on a task to edit it
-- Modify the title or description
-- Save the changes
-- Verify the task has been updated
-
-### 5. Completing/Uncompleting a Task
-- Click the checkbox next to a task
-- The completion status should toggle
-- The UI should reflect the change
-
-### 6. Deleting a Task
-- Click the delete button for a task
-- Confirm the deletion
-- Verify the task is removed from your list
+The frontend will be available at `http://localhost:3000`.
 
 ## API Endpoints
-For direct API testing, use these endpoints with proper JWT authentication:
 
-- GET `/api/{user_id}/tasks` - Get all tasks for user
-- POST `/api/{user_id}/tasks` - Create a new task
-- GET `/api/{user_id}/tasks/{id}` - Get specific task
-- PUT `/api/{user_id}/tasks/{id}` - Update a task
-- DELETE `/api/{user_id}/tasks/{id}` - Delete a task
-- PATCH `/api/{user_id}/tasks/{id}/complete` - Toggle completion status
+Once running, the following endpoints will be available:
+
+### Authentication Endpoints
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login a user
+
+### Task Management Endpoints
+- `GET /api/tasks` - List all tasks for authenticated user
+- `POST /api/tasks` - Create a new task for authenticated user
+- `GET /api/tasks/{id}` - Get a specific task
+- `PUT /api/tasks/{id}` - Update a task
+- `DELETE /api/tasks/{id}` - Delete a task
+- `PATCH /api/tasks/{id}/complete` - Toggle completion status
+
+## Database Migrations
+The application uses SQLModel which handles automatic table creation on startup. No manual migrations are needed for basic setup.
+
+## Better Auth Integration
+The application uses Better Auth for authentication with JWT tokens. The backend verifies JWT tokens issued by Better Auth to ensure secure access to user-specific data.
 
 ## Troubleshooting
-- If you get authentication errors, ensure your JWT token is valid and properly included in requests
-- If tasks don't appear, verify the user_id in the API calls matches the authenticated user
-- Check the browser console and server logs for specific error messages
+
+### Common Issues
+1. **Database Connection**: Ensure your DATABASE_URL is correctly configured for your PostgreSQL instance
+2. **JWT Verification**: Make sure BETTER_AUTH_SECRET is identical in both frontend and backend environments
+3. **CORS Issues**: If experiencing CORS errors, ensure your frontend and backend URLs are properly configured
+
+### Verification Steps
+1. Check that both servers are running
+2. Verify environment variables are set correctly
+3. Confirm the database connection is working
+4. Test the `/health` endpoint on the backend
+
+## Development
+For development, both servers support hot reloading. Changes to the code will automatically reload the respective server.
+
+## Testing
+To run backend tests:
+```bash
+cd backend
+pytest
+```
+
+To run frontend tests:
+```bash
+cd frontend
+npm run test
+```

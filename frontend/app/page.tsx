@@ -1,21 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useAuth } from '@/src/context/AuthContext';
 
 export default function Home() {
-  // In a real app, this would come from authentication context
-  const [userId, setUserId] = useState<string | null>(null); // Placeholder - no user initially
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  const handleLogin = () => {
-    // In a real app, this would trigger the authentication flow
-    setUserId('user123'); // Placeholder user ID
-  };
-
-  const handleLogout = () => {
-    // In a real app, this would trigger the logout flow
-    setUserId(null);
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <p className="text-xl text-gray-700">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -23,29 +20,37 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">Todo App</h1>
           <nav>
-            {userId ? (
+            {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                <span className="text-gray-700">Welcome!</span>
+                <span className="text-gray-700">Welcome, {user?.name || user?.email}!</span>
                 <Link
                   href="/tasks"
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                 >
                   My Tasks
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                <Link
+                  href="/create-task"
+                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
                 >
-                  Logout
-                </button>
+                  Create Task
+                </Link>
               </div>
             ) : (
-              <button
-                onClick={handleLogin}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Login
-              </button>
+              <div className="flex space-x-3">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
           </nav>
         </div>
@@ -61,20 +66,16 @@ export default function Home() {
           </p>
 
           <div className="mt-10">
-            {userId ? (
-              <Link
-                href="/create-task"
-                className="inline-block px-8 py-4 bg-green-500 text-white text-lg font-medium rounded-md hover:bg-green-600 transition-colors"
-              >
-                Create New Task
-              </Link>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="inline-block px-8 py-4 bg-blue-500 text-white text-lg font-medium rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Get Started
-              </button>
+            {!isAuthenticated && (
+              <div className="space-y-4">
+                <Link
+                  href="/signup"
+                  className="inline-block px-8 py-4 bg-blue-500 text-white text-lg font-medium rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  Get Started - Sign Up
+                </Link>
+                <p className="text-gray-600">Already have an account? <Link href="/login" className="text-blue-500 hover:underline">Log in</Link></p>
+              </div>
             )}
           </div>
 

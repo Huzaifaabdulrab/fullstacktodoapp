@@ -1,3 +1,5 @@
+#auth/middleware.py
+import re
 from fastapi import Request, HTTPException, status
 from src.auth.jwt_handler import verify_token
 
@@ -38,6 +40,20 @@ async def jwt_middleware(request: Request, call_next):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             request.state.user_id = user_id
+
+            # For task-related endpoints, verify that the user_id in the token matches
+            # the user_id in the URL path to ensure proper user isolation
+            path_parts = request.url.path.strip('/').split('/')
+            if len(path_parts) >= 3 and path_parts[1] == 'api' and path_parts[2]:  # e.g., /api/{user_id}/tasks
+                url_user_id = path_parts[2]
+
+                # Check if this is a task-related endpoint that requires user verification
+                if url_user_id and ('tasks' in path_parts or 'task' in path_parts):
+                    if request.state.user_id != url_user_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access denied: User ID in token does not match user ID in URL"
+                        )
 
         except HTTPException:
             # Re-raise HTTP exceptions as-is

@@ -1,44 +1,71 @@
-# Research: Task CRUD Operations
+# Research: Todo Full-Stack Web Application Phase II
 
 ## Overview
-This document captures research findings and technical decisions for implementing the Task CRUD operations in the Todo App.
+This document captures research findings and technical decisions for implementing the complete authentication, middleware, login/signup, task cards, task editing, and full CRUD functionality for the Todo App as specified in the Phase II requirements.
 
-## Decision: Task Model Implementation
-**Rationale**: Need to define the structure of the Task entity based on requirements in the feature spec.
-**Decision**: Implement Task model using SQLModel with fields for id, user_id, title, description, completed status, and timestamps.
-**Alternatives considered**: Using raw SQLAlchemy or Pydantic only - SQLModel was chosen for its combination of Pydantic validation and SQLAlchemy ORM capabilities.
+## Gap Analysis
+After analyzing the current implementation, the following gaps were identified:
 
-## Decision: Authentication Approach
-**Rationale**: Need to ensure tasks are properly associated with authenticated users.
-**Decision**: Use Better Auth with JWT tokens to authenticate API requests and associate tasks with users.
-**Alternatives considered**: Session-based authentication vs. JWT tokens - JWT was chosen for its stateless nature and ease of use in API contexts.
+### 1. API Endpoint Structure
+**Issue**: Current API endpoints use `/api/tasks` format instead of required `/api/{user_id}/tasks` format.
+**Solution**: Update backend routes to include user_id in the path and ensure proper user identification from JWT token.
+**Impact**: Requires changes to both backend route definitions and frontend API calls.
 
-## Decision: API Endpoint Structure
-**Rationale**: Need to design RESTful endpoints that follow best practices and meet user story requirements.
-**Decision**: Implement endpoints following the pattern /api/{user_id}/tasks with standard HTTP methods for CRUD operations.
-**Alternatives considered**: Resource-based vs. action-based endpoints - chose resource-based for better REST compliance.
+### 2. Better Auth Integration
+**Issue**: Current implementation uses custom authentication instead of Better Auth.
+**Solution**: Replace custom auth with Better Auth integration, ensuring JWT tokens are properly issued and validated.
+**Impact**: Major change to authentication system, requiring updates to both frontend and backend.
 
-## Decision: Frontend Component Structure
-**Rationale**: Need to implement UI components that allow users to interact with tasks according to user stories.
-**Decision**: Create reusable components like TaskList, TaskItem, and TaskForm to handle different aspects of task management.
-**Alternatives considered**: Monolithic vs. component-based approach - chose component-based for better maintainability and reusability.
+### 3. Frontend Authentication Flow
+**Issue**: Frontend uses placeholder user IDs instead of proper authentication flow with Better Auth.
+**Solution**: Implement Better Auth in the frontend to handle user registration/login and JWT token management.
+**Impact**: Significant changes to frontend authentication components and state management.
 
-## Decision: Database Indexing Strategy
-**Rationale**: Need to ensure efficient querying of tasks, especially for filtering operations.
-**Decision**: Create indexes on user_id and completed fields to optimize common query patterns.
-**Alternatives considered**: Various indexing strategies - chose minimal indexing to balance query performance with write performance.
+### 4. API URL Configuration
+**Issue**: Frontend API URL is hardcoded to a specific IP address.
+**Solution**: Use environment variables for API base URL configuration.
+**Impact**: Minor configuration change.
 
-## Best Practices: Error Handling
-**Rationale**: Need to handle various error conditions gracefully.
-**Decision**: Implement consistent error handling with appropriate HTTP status codes and meaningful error messages.
-**Alternatives considered**: Generic vs. specific error responses - chose specific responses for better debugging.
+## Decision: Backend API Structure
+**Rationale**: Need to align backend API with the specified requirements for user isolation.
+**Decision**: Update FastAPI routes to follow the pattern `/api/{user_id}/tasks` and verify that the user_id in the URL matches the user_id decoded from the JWT token.
+**Alternatives considered**: Keeping current structure vs. updating to match spec - chose to update to match spec for security and compliance.
 
-## Best Practices: Validation
-**Rationale**: Need to ensure data integrity according to acceptance criteria.
-**Decision**: Implement validation at multiple levels - frontend for UX, backend for security, and database for data integrity.
-**Alternatives considered**: Client-side only vs. multi-layer validation - chose multi-layer for robustness.
+## Decision: Better Auth Integration
+**Rationale**: Requirement specifies using Better Auth for authentication.
+**Decision**: Replace current custom authentication with Better Auth, configuring it to issue JWT tokens that can be verified by the FastAPI backend.
+**Alternatives considered**: Continuing with custom auth vs. switching to Better Auth - chose Better Auth to comply with requirements.
 
-## Patterns: Service Layer Architecture
-**Rationale**: Need to separate business logic from API endpoints for maintainability.
-**Decision**: Implement a service layer that encapsulates task-related business logic.
-**Alternatives considered**: Direct controller-to-database vs. service layer - chose service layer for better separation of concerns.
+## Decision: Frontend Authentication Components
+**Rationale**: Need to implement login/signup functionality that integrates with Better Auth.
+**Decision**: Create dedicated login and signup pages/components that interface with Better Auth.
+**Alternatives considered**: Modifying existing components vs. creating new ones - chose new components for cleaner separation.
+
+## Decision: Task Card and Editing Interface
+**Rationale**: Requirements specify implementing task cards and editing functionality.
+**Decision**: Enhance existing TaskItem and TaskForm components to provide better UX for task management.
+**Alternatives considered**: Building from scratch vs. enhancing existing components - chose enhancement to leverage existing work.
+
+## Best Practices: JWT Token Verification
+**Rationale**: Need to ensure secure verification of JWT tokens between frontend and backend.
+**Decision**: Implement proper JWT verification middleware in FastAPI that validates tokens issued by Better Auth.
+**Alternatives considered**: Different token formats or verification methods - chose JWT for its stateless nature and industry standard.
+
+## Patterns: Environment Configuration
+**Rationale**: Need to properly configure environment variables for both frontend and backend.
+**Decision**: Use .env files for local development with proper environment variable names (e.g., NEXT_PUBLIC_API_BASE_URL, DATABASE_URL, BETTER_AUTH_SECRET).
+**Alternatives considered**: Hardcoding values vs. environment variables - chose environment variables for security and flexibility.
+
+## Security Considerations
+**Issue**: Ensuring proper user isolation where each user only sees their own tasks.
+**Solution**: Implement middleware that verifies the user_id in the JWT token matches the user_id in the API path.
+**Implementation**: Add validation in the JWT middleware to compare token subject with URL parameter.
+
+## Implementation Plan
+1. Integrate Better Auth in the frontend
+2. Update backend to verify Better Auth JWT tokens
+3. Modify API endpoints to follow `/api/{user_id}/tasks` pattern
+4. Update frontend API calls to include proper user_id
+5. Create login/signup pages
+6. Enhance task card and editing interfaces
+7. Configure proper environment variables
