@@ -1,1 +1,3 @@
-# This file makes src.api a Python package
+"""
+API endpoints and dependencies for the Todo Backend API.
+"""

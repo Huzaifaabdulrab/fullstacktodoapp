@@ -1,104 +1,157 @@
-'use client'
-// frontend/src/components/TaskList.tsx
-import React, { useState, useEffect } from 'react';
-import { Task } from '../types/task';
-import TaskItem from './TaskItem';
-import { taskApi } from '../lib/api';
-import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+/**
+ * TaskList component.
+ * Fetches and displays all tasks for the authenticated user.
+ */
+"use client";
 
-interface TaskListProps {}
+import { useEffect, useState } from "react";
+import { Task } from "@/types/task";
+import { TaskItem } from "@/components/TaskItem";
+import { tasksApi, ApiError } from "@/lib/api";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Inbox, RefreshCw } from "lucide-react";
+import Link from "next/link";
 
-const TaskList: React.FC<TaskListProps> = () => {
+export function TaskList() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
-
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchTasks();
-    } else {
-      router.push('/login');
-    }
-  }, [filter, isAuthenticated, router]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = async () => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      const tasksData = await taskApi.getTasks(filter);
-      setTasks(tasksData);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
+      const data = await tasksApi.getAll();
+      setTasks(data);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const message = err.data?.detail || "Failed to load tasks";
+        setError(message);
+        // toast.error(message);
+      } else {
+        setError("An unexpected error occurred");
+        toast.error("An unexpected error occurred");
+      }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleTaskUpdate = (updatedTask: Task) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task))
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const handleToggleComplete = async (taskId: string) => {
+    // Optimistic update
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId
+          ? { ...task, is_completed: !task.is_completed }
+          : task
+      )
+    );
+
+    try {
+      const updatedTask = await tasksApi.toggleComplete(taskId);
+      // Update with server response
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => (task.id === taskId ? updatedTask : task))
+      );
+      toast.success(
+        updatedTask.is_completed
+          ? "Task marked as complete"
+          : "Task marked as incomplete"
+      );
+    } catch (err) {
+      // Rollback on error
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId
+            ? { ...task, is_completed: !task.is_completed }
+            : task
+        )
+      );
+      if (err instanceof ApiError) {
+        toast.error(err.data?.detail || "Failed to update task");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    }
+  };
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
     );
   };
 
-  const handleTaskDelete = (taskId: number) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
   };
 
-  if (loading) {
-    return <div className="text-center py-8">Loading tasks...</div>;
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-20 bg-muted/50 animate-pulse rounded-xl border"
+          />
+        ))}
+      </div>
+    );
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Your Tasks</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded ${filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('pending')}
-            className={`px-3 py-1 rounded ${filter === 'pending' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Pending
-          </button>
-          <button
-            onClick={() => setFilter('completed')}
-            className={`px-3 py-1 rounded ${filter === 'completed' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Completed
-          </button>
-        </div>
-      </div>
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          {/* <p className="text-destructive mb-4">{error}</p> */}
+          <Button onClick={fetchTasks} variant="outline" className="gap-2">
+           <Link href={"/login"}> Create Account  </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
-      {tasks.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          {filter === 'completed'
-            ? 'No completed tasks yet.'
-            : filter === 'pending'
-              ? 'No pending tasks. Great job!'
-              : 'No tasks yet. Add your first task!'}
-        </div>
-      ) : (
-        <div>
-          {tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              onTaskUpdate={handleTaskUpdate}
-              onTaskDelete={handleTaskDelete}
-            />
-          ))}
-        </div>
-      )}
+  if (tasks.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center">
+          <Inbox className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium mb-2">No tasks yet</h3>
+          <p className="text-muted-foreground">
+            Create your first task to get started!
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const completedCount = tasks.filter((t) => t.is_completed).length;
+  const totalCount = tasks.length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{totalCount} task{totalCount !== 1 ? "s" : ""}</span>
+        <span>{completedCount} completed</span>
+      </div>
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <TaskItem
+            key={task.id}
+            task={task}
+            onToggleComplete={handleToggleComplete}
+            onTaskUpdated={handleTaskUpdated}
+            onTaskDeleted={handleTaskDeleted}
+          />
+        ))}
+      </div>
     </div>
   );
-};
-
-export default TaskList;
+}

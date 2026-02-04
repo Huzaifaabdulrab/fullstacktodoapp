@@ -1,158 +1,247 @@
-# src/api/tasks.py
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
-from typing import List, Optional
+"""
+Tasks API endpoints.
+Handles task CRUD operations with authentication and user isolation.
+"""
+from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
-from src.db.database import get_session
-from src.models.task import Task, TaskCreate, TaskRead, TaskUpdate, TaskToggleComplete
-from src.services.task_service import TaskService
+from pydantic import BaseModel, Field
+from typing import Annotated, List, Optional
+from uuid import UUID
+
+from core.database import get_session
+from services.tasks import TasksService
+from api.dependencies import get_current_user
+from models.user import User
+from models.task import Task
 
 
-router = APIRouter(prefix="/api", tags=["tasks"])
+router = APIRouter()
 
 
-@router.get("/{user_id}/tasks", response_model=List[TaskRead])
-def get_tasks(
-    request: Request,
-    user_id: str,
-    status: Optional[str] = Query(None, description="Filter tasks by status (pending, completed, all)"),
-    session: Session = Depends(get_session)
-):
+# Request/Response Models
+class TaskRead(BaseModel):
+    """Response model for task data."""
+    id: str
+    user_id: str
+    title: str
+    description: Optional[str] = None
+    is_completed: bool
+    created_at: str
+    updated_at: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "123e4567-e89b-12d3-a456-426614174000",
+                "user_id": "987e6543-e21c-32d1-b654-321456987000",
+                "title": "Complete project documentation",
+                "description": "Write comprehensive README and API docs",
+                "is_completed": False,
+                "created_at": "2025-01-15T10:30:00Z",
+                "updated_at": "2025-01-15T10:30:00Z"
+            }
+        }
+    }
+
+
+class TaskCreate(BaseModel):
+    """Request model for creating a task."""
+    title: str = Field(..., min_length=1, max_length=200, description="Task title")
+    description: Optional[str] = Field(None, max_length=2000, description="Task description")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Complete project documentation",
+                "description": "Write comprehensive README and API docs"
+            }
+        }
+    }
+
+
+class TaskUpdate(BaseModel):
+    """Request model for updating a task."""
+    title: Optional[str] = Field(None, min_length=1, max_length=200, description="Task title")
+    description: Optional[str] = Field(None, max_length=2000, description="Task description")
+    is_completed: Optional[bool] = Field(None, description="Completion status")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Updated task title",
+                "description": "Updated description",
+                "is_completed": True
+            }
+        }
+    }
+
+
+def task_to_read(task: Task) -> TaskRead:
+    """Convert Task model to TaskRead response."""
+    return TaskRead(
+        id=str(task.id),
+        user_id=str(task.user_id),
+        title=task.title,
+        description=task.description,
+        is_completed=task.is_completed,
+        created_at=task.created_at.isoformat(),
+        updated_at=task.updated_at.isoformat()
+    )
+
+
+@router.get(
+    "",
+    response_model=List[TaskRead],
+    status_code=status.HTTP_200_OK,
+    summary="Get all tasks",
+    description="Retrieve all tasks for the authenticated user, ordered by creation date (newest first)."
+)
+async def get_tasks(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> List[TaskRead]:
     """
-    Get all tasks for a specific user, optionally filtered by status.
+    Get all tasks for the authenticated user.
+
+    Returns list of tasks ordered by creation date (newest first).
+    Empty list if user has no tasks.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    tasks = TaskService.get_user_tasks(session, user_id, status)
-    return tasks
+    tasks = TasksService.get_user_tasks(session=session, user_id=current_user.id)
+    return [task_to_read(task) for task in tasks]
 
 
-@router.post("/{user_id}/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
-def create_task(
-    request: Request,
-    user_id: str,
-    task_data: TaskCreate,
-    session: Session = Depends(get_session)
-):
+@router.post(
+    "",
+    response_model=TaskRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new task",
+    description="Create a new task for the authenticated user."
+)
+async def create_task(
+    request: TaskCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> TaskRead:
     """
-    Create a new task for a specific user.
+    Create a new task.
+
+    - **title**: Task title (required, max 200 characters)
+    - **description**: Task description (optional, max 2000 characters)
+
+    Returns the created task with is_completed set to False.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    task = TaskService.create_task(session, user_id, task_data)
-    return task
+    task = TasksService.create_task(
+        session=session,
+        user_id=current_user.id,
+        title=request.title,
+        description=request.description
+    )
+    return task_to_read(task)
 
 
-@router.get("/{user_id}/tasks/{task_id}", response_model=TaskRead)
-def get_task(
-    request: Request,
-    user_id: str,
-    task_id: int,
-    session: Session = Depends(get_session)
-):
+@router.get(
+    "/{task_id}",
+    response_model=TaskRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get a task by ID",
+    description="Retrieve a specific task by ID. User must own the task."
+)
+async def get_task(
+    task_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> TaskRead:
     """
-    Get a specific task by ID for a specific user.
+    Get a specific task by ID.
+
+    Returns 404 if task doesn't exist or doesn't belong to the user.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    task = TaskService.get_task_by_id(session, user_id, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    task = TasksService.get_task_by_id(
+        session=session,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    return task_to_read(task)
 
 
-@router.put("/{user_id}/tasks/{task_id}", response_model=TaskRead)
-def update_task(
-    request: Request,
-    user_id: str,
-    task_id: int,
-    task_data: TaskUpdate,
-    session: Session = Depends(get_session)
-):
+@router.put(
+    "/{task_id}",
+    response_model=TaskRead,
+    status_code=status.HTTP_200_OK,
+    summary="Update a task",
+    description="Update task title, description, or completion status. User must own the task."
+)
+async def update_task(
+    task_id: UUID,
+    request: TaskUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> TaskRead:
     """
-    Update a task for a specific user.
+    Update an existing task.
+
+    - **title**: New title (optional)
+    - **description**: New description (optional)
+    - **is_completed**: New completion status (optional)
+
+    Returns 404 if task doesn't exist or doesn't belong to the user.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    task = TaskService.update_task(session, user_id, task_id, task_data)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    task = TasksService.update_task(
+        session=session,
+        task_id=task_id,
+        user_id=current_user.id,
+        title=request.title,
+        description=request.description,
+        is_completed=request.is_completed
+    )
+    return task_to_read(task)
 
 
-@router.delete("/{user_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(
-    request: Request,
-    user_id: str,
-    task_id: int,
-    session: Session = Depends(get_session)
-):
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a task",
+    description="Permanently delete a task. User must own the task."
+)
+async def delete_task(
+    task_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> None:
     """
-    Delete a task for a specific user.
+    Delete a task permanently.
+
+    Returns 204 No Content on success.
+    Returns 404 if task doesn't exist or doesn't belong to the user.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    success = TaskService.delete_task(session, user_id, task_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return
+    TasksService.delete_task(
+        session=session,
+        task_id=task_id,
+        user_id=current_user.id
+    )
 
 
-@router.patch("/{user_id}/tasks/{task_id}/complete", response_model=TaskRead)
-def toggle_task_completion(
-    request: Request,
-    user_id: str,
-    task_id: int,
-    toggle_data: TaskToggleComplete = None,
-    session: Session = Depends(get_session)
-):
+@router.patch(
+    "/{task_id}/complete",
+    response_model=TaskRead,
+    status_code=status.HTTP_200_OK,
+    summary="Toggle task completion",
+    description="Toggle a task's completion status. User must own the task."
+)
+async def toggle_task_completion(
+    task_id: UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+) -> TaskRead:
     """
-    Toggle the completion status of a task for a specific user.
+    Toggle task completion status.
+
+    If task is completed, marks it as incomplete. If incomplete, marks it as completed.
+    Returns 404 if task doesn't exist or doesn't belong to the user.
     """
-    token_user_id = request.state.user_id
-
-    # Verify that the user_id in the token matches the user_id in the URL
-    if token_user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User ID mismatch"
-        )
-
-    task = TaskService.toggle_task_completion(session, user_id, task_id, toggle_data)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    task = TasksService.toggle_task_completion(
+        session=session,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    return task_to_read(task)
