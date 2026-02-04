@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from mangum import Mangum  
 
 app = FastAPI()
 
@@ -6,5 +7,5 @@ app = FastAPI()
 def read_root():
     return {"Hello": "World"}
 
-if __name__ == "__main__":
-    read_root()
+# Serverless handler for Vercel
+handler = Mangum(app)
