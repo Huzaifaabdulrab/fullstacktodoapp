@@ -11,7 +11,7 @@ import { tasksApi, ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Inbox, RefreshCw } from "lucide-react";
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 
 export function TaskList() {

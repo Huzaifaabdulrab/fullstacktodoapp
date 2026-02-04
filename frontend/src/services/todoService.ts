@@ -3,7 +3,6 @@
  * Includes functionality for submitting pending todos after authentication.
  */
 import { tasksApi } from "@/lib/api";
-import { PendingTodo } from "@/types/task";
 import { getPendingTodos, clearPendingTodos, removePendingTodo } from "@/utils/storage";
 import { toast } from "sonner";
 

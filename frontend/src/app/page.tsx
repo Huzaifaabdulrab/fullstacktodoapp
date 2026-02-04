@@ -14,11 +14,7 @@ import { authApi } from "@/lib/api";
 import { Task } from "@/types/task";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  CheckSquare,
-  LogOut,
-  ListTodo,
-} from "lucide-react";
+import { LogOut,} from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
