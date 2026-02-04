@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION_HOURS: int = 24
 
     # CORS Configuration
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "https://hackathon2fullstacktodoapp.vercel.app/"
 
     # Application Settings
     APP_NAME: str = "Todo Backend API"
