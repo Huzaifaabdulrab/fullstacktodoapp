@@ -3,7 +3,7 @@
  * Handles authentication, request/response formatting, and error handling.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://todoappbackend-three.vercel.app/";
 
 /**
  * Custom error class for API errors.
