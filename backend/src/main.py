@@ -15,7 +15,6 @@ from middleware.logging import LoggingMiddleware
 from middleware.errors import ErrorHandlingMiddleware
 from api import auth as auth_router
 from api import tasks as tasks_router
-from mangum import Mangum
 
 # Configure logging
 logging.basicConfig(
@@ -104,5 +103,3 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=settings.DEBUG
     )
-
-handler = Mangum(app)
