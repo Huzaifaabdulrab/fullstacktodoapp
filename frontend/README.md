@@ -1,36 +1,169 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Todo Frontend
 
-## Getting Started
+Next.js 16-based frontend for the Todo Full-Stack Web Application.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript 5.x (strict mode)
+- **Authentication:** Better Auth with JWT plugin
+- **Styling:** Tailwind CSS 4
+- **UI Components:** shadcn/ui (Radix UI)
+- **Icons:** Lucide React
+- **Notifications:** Sonner
+- **Package Manager:** pnpm
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (app)/              # Protected app routes
+│   │   │   ├── layout.tsx      # App layout with logout
+│   │   │   └── page.tsx        # Main todo list page
+│   │   ├── (auth)/             # Authentication routes
+│   │   │   ├── login/          # Login page
+│   │   │   ├── register/       # Registration page
+│   │   │   └── layout.tsx      # Auth layout
+│   │   ├── layout.tsx          # Root layout
+│   │   └── globals.css         # Global styles
+│   ├── components/             # React components
+│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── AuthForm.tsx        # Login/Register form
+│   │   ├── TaskForm.tsx        # Task creation form
+│   │   ├── TaskList.tsx        # Task list container
+│   │   ├── TaskItem.tsx        # Single task display
+│   │   ├── EditTaskDialog.tsx  # Edit task modal
+│   │   └── DeleteTaskDialog.tsx # Delete confirmation modal
+│   ├── lib/                    # Utilities
+│   │   ├── auth.ts             # Better Auth config
+│   │   ├── api.ts              # API client
+│   │   └── utils.ts            # Helper functions
+│   └── types/                  # TypeScript types
+│       └── task.ts             # Task interface
+├── package.json                # Dependencies
+├── tsconfig.json               # TypeScript config
+└── tailwind.config.ts          # Tailwind config
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env.local` file in the `frontend/` directory:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:8000
 
-## Learn More
+# Better Auth Configuration
+BETTER_AUTH_SECRET=your-better-auth-secret-here-minimum-32-characters
+BETTER_AUTH_URL=http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 18+
+- pnpm package manager: `npm install -g pnpm`
 
-## Deploy on Vercel
+### Installation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Navigate to frontend directory
+cd frontend
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Install dependencies
+pnpm install
+
+# Copy environment template
+cp .env.local.example .env.local
+# Edit .env.local with your configuration
+```
+
+### Development
+
+```bash
+# Start development server
+pnpm dev
+
+# The app will be available at http://localhost:3000
+```
+
+### Production Build
+
+```bash
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+
+# Type check
+pnpm type-check
+
+# Lint
+pnpm lint
+```
+
+## Features
+
+### Authentication
+- ✅ User registration with validation
+- ✅ Login with JWT tokens
+- ✅ Protected routes
+- ✅ Automatic redirect logic
+- ✅ Logout functionality
+
+### Task Management
+- ✅ Create tasks with title and description
+- ✅ View all personal tasks
+- ✅ Toggle completion status
+- ✅ Edit task details
+- ✅ Delete tasks with confirmation
+- ✅ Multi-user isolation
+
+### UX Enhancements
+- ✅ Loading states with skeletons
+- ✅ Error boundaries
+- ✅ Toast notifications
+- ✅ Optimistic UI updates
+- ✅ Responsive design (mobile + desktop)
+- ✅ Empty state messaging
+
+## API Integration
+
+The `lib/api.ts` module provides type-safe API client:
+
+```typescript
+import { authApi, tasksApi } from "@/lib/api";
+
+// Authentication
+await authApi.register({ email, password });
+await authApi.login({ email, password });
+await authApi.logout();
+
+// Tasks
+const tasks = await tasksApi.getAll();
+const task = await tasksApi.create({ title, description });
+await tasksApi.update(taskId, { title, description });
+await tasksApi.delete(taskId);
+await tasksApi.toggleComplete(taskId);
+```
+
+## Type Safety
+
+Strict TypeScript configuration enabled:
+- `strict: true`
+- `noUnusedLocals: true`
+- `noUnusedParameters: true`
+- `noUncheckedIndexedAccess: true`
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push code to GitHub
+2. Import project to Vercel
+3. Configure environment variables
+4. Deploy
